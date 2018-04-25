@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Socket.io and Node</title>
+        <!-- Latest compiled and minified CSS -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+        <style>
+            .chat-form { display: none; }
+            .boardcast-form { display: none; }
+            #username { text-transform: capitalize; font-weight: bold; color: #bf5050; }
+        </style>    
+    </head>
+    <body>
+        <div class="container">
+            <div class="form-group">
+                <div id="userexistonregistration"></div>
+                <form class="username-form" method="post" action="">
+                    <br/>
+                    <input class="form-control" type="text" /><br/>
+                    <input type="submit" value="Join" class="btn btn-primary btn-sm" />
+                </form>
+            </div>   
+
+            <div class="form-group">
+                <div id="userexist"></div>
+                <form class="chat-form" method="post" action="">
+                    <div>Hey <span id="username">Guest</span></div>
+                    <br />
+
+                    <div class="form-group">
+                        <label>Send Personal Message to User: </label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>To:</label>
+                        <input id="recipient" class="form-control" />
+                    </div>
+
+
+                    <div class="form-group">
+                        <label>Message: </label>
+                        <textarea class="form-control" id="message"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <input type="hidden" id="from" />
+                        <input type="submit" value="Send Personal Message" class="btn btn-primary" />
+                    </div>
+                    
+                    <div class="well">
+                        <h4>Personal Message display below:</h4>
+                        <ul id="messages">
+
+                        </ul>
+                    </div>
+                    
+                    <div class="well">
+                        <h4>Boardcast Message display below:</h4>
+                        <ul id="bmessages">
+
+                        </ul>
+                    </div>
+                </form>
+            </div>
+
+            <div class="form-group">
+                <form class="boardcast-form" method="post" action="">
+                    <div class="form-group">
+                        <label>Send Board Cast Message to all users: </label>
+                        <textarea id="message" class="form-control"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <input type="submit" value="Send Boardcast Message" class="btn btn-primary" />
+                    </div>
+                </form>  
+            </div>
+        </div>
+
+        <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+        <script src="socket.io-client/socket.io.js"></script>
+        <script>
+            //var socket = io.connect('http://localhost:3000');
+            
+            var socket = io('http://'+document.domain+':2020');
+            console.log(socket);
+
+            // Add a username
+            $(".username-form").on("submit", function () {
+
+                // Tell the server about it
+                var username = $(this).children("input").val();
+                $("#from").val(username);
+                socket.emit("add-user", {"username": username});
+
+                // Remove this form and show the chat form
+                // $(this).remove();
+                $("#username").text(username);
+                chat_form.show();
+                boardcast_form.show();
+                return false;
+            });
+
+            // Chat form
+            var chat_form = $(".chat-form");
+            var boardcast_form = $(".boardcast-form");
+            chat_form.on("submit", function () {
+                console.log(socket.id);
+                // Send the message to the server
+                socket.emit("private-message", {
+                    "username": $(this).find("input:first").val(),
+                    "content": $(this).find("textarea").val(),
+                    "from": $("#from").val()
+                });
+
+                // Empty the form
+                $(this).find("input:first, textarea").val('');
+                return false;
+            });
+
+
+            boardcast_form.on("submit", function () {
+                // Send the message to the server
+                socket.emit("boardcast-message", {
+                    "username": $("#username").text(),
+                    "content": $(this).find("textarea").val()
+                });
+
+                // Empty the form
+                $(this).find("textarea").val('');
+                return false;
+            });
+
+            // Whenever we receieve a message, append it to the <ul>
+            socket.on("add-message", function (data) {
+                $("#messages").append($("<li>", {
+                    "text": data.from+ ": "+data.content
+                }));
+            });
+
+
+            // Whenever we receieve a message, append it to the <ul>
+            socket.on("boardcast-message", function (data) {
+                $("#bmessages").append($("<li>", {
+                    "text": data.username+ ": "+data.content
+                }));
+            });
+            
+            socket.on('userExist', function(data){
+                $("#userexist").html(data);
+            });
+            
+            socket.on('userExistonRegistration', function(data){
+                $("#userexistonregistration").html(data);
+                $(".chat-form").css('display', 'none');
+                $(".boardcast-form").css('display', 'none');
+                $(".username-form").css('display', 'block');
+            });
+            
+            socket.on('showchat', function(data){
+                $("#userexistonregistration").html('');
+                $(".chat-form").css('display', 'block');
+                $(".boardcast-form").css('display', 'block');
+                $(".username-form").remove();
+            });
+        </script>
+    </body>
+</html>
+
